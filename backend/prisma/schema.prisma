@@ -1,0 +1,183 @@
+generator client {
+    provider = "prisma-client-js"
+    output   = "../node_modules/.prisma/client"
+}
+
+generator json {
+    provider = "prisma-json-types-generator"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+model User {
+    id        String   @id @default(cuid())
+    email     String   @unique
+    name      String?
+    password  String
+    role      Role     @default(USER)
+    status    String   @default("active")
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    stories   Story[]
+    pdfJobs   PdfJob[]
+    auditLogs AuditLog[]
+
+    @@map("users")
+}
+
+enum Role {
+    USER
+    ADMIN
+}
+
+model Story {
+    id            String    @id @default(cuid())
+    userId        String
+    title         String?
+    author        String?
+    sourceUrl     String
+    sourceHost    String
+    language      String?
+    status        String    @default("pending")
+    lastScannedAt DateTime?
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+
+    user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+    tocItems  TocItem[]
+    chapters  Chapter[]
+    crawlJobs CrawlJob[]
+    pdfJobs   PdfJob[]
+
+    @@unique([userId, sourceUrl])
+    @@index([userId])
+    @@map("stories")
+}
+
+model TocItem {
+    id        String   @id @default(cuid())
+    storyId   String
+    title     String
+    url       String
+    position  Int
+    createdAt DateTime @default(now())
+
+    story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+    @@unique([storyId, position])
+    @@index([storyId])
+    @@map("toc_items")
+}
+
+model Chapter {
+    id          String    @id @default(cuid())
+    storyId     String
+    tocItemId   String?
+    title       String
+    sourceUrl   String
+    status      String    @default("pending")
+    fetchedAt   DateTime?
+    publishedAt DateTime?
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+
+    story   Story           @relation(fields: [storyId], references: [id], onDelete: Cascade)
+    content ChapterContent?
+
+    @@unique([storyId, sourceUrl])
+    @@index([storyId])
+    @@map("chapters")
+}
+
+model ChapterContent {
+    id          String   @id @default(cuid())
+    chapterId   String   @unique
+    contentText String   @db.Text
+    contentHtml String?  @db.Text
+    contentHash String?
+    wordCount   Int      @default(0)
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+    @@index([chapterId])
+    @@map("chapter_contents")
+}
+
+model CrawlJob {
+    id            String    @id @default(cuid())
+    storyId       String
+    status        String    @default("pending")
+    progressTotal Int       @default(0)
+    progressDone  Int       @default(0)
+    errorCode     String?
+    errorMessage  String?
+    startedAt     DateTime?
+    finishedAt    DateTime?
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+
+    story Story @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+    @@index([storyId])
+    @@map("crawl_jobs")
+}
+
+model PdfJob {
+    id           String    @id @default(cuid())
+    userId       String
+    storyId      String
+    status       String    @default("pending")
+    includeCover Boolean   @default(true)
+    includeToc   Boolean   @default(true)
+    startedAt    DateTime?
+    finishedAt   DateTime?
+    createdAt    DateTime  @default(now())
+    updatedAt    DateTime  @updatedAt
+
+    user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+    story Story     @relation(fields: [storyId], references: [id], onDelete: Cascade)
+    files PdfFile[]
+
+    @@index([userId])
+    @@index([storyId])
+    @@map("pdf_jobs")
+}
+
+model PdfFile {
+    id              String    @id @default(cuid())
+    pdfJobId        String
+    storageProvider String    @default("local")
+    storageKey      String
+    fileName        String
+    fileSizeBytes   Int
+    checksumSha256  String?
+    pageCount       Int?
+    createdAt       DateTime  @default(now())
+    expiresAt       DateTime?
+
+    pdfJob PdfJob @relation(fields: [pdfJobId], references: [id], onDelete: Cascade)
+
+    @@unique([pdfJobId])
+    @@map("pdf_files")
+}
+
+model AuditLog {
+    id         String   @id @default(cuid())
+    userId     String?
+    actionType String
+    targetType String
+    targetId   String?
+    reason     String?
+    createdAt  DateTime @default(now())
+
+    user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+    @@index([userId])
+    @@index([createdAt])
+    @@map("audit_logs")
+}
