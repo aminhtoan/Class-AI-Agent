@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>StoryBridge - Chapter Preview &amp; Export</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                "on-primary-container": "#d3f1ff",
+                "primary-fixed": "#b9eaff",
+                "secondary-container": "#d0e1fb",
+                "primary-container": "#0e7490",
+                "border-subtle": "#E2E8F0",
+                "tertiary-fixed": "#ffdcbd",
+                "background": "#f7fafc",
+                "surface-container": "#ebeef0",
+                "surface-variant": "#e0e3e5",
+                "on-tertiary-fixed-variant": "#693c00",
+                "on-primary-fixed-variant": "#004d62",
+                "on-surface": "#181c1e",
+                "primary": "#005a71",
+                "surface-bright": "#f7fafc",
+                "on-primary-fixed": "#001f29",
+                "on-tertiary-container": "#ffe8d6",
+                "primary-fixed-dim": "#81d1f0",
+                "surface-tint": "#006781",
+                "on-secondary-container": "#54647a",
+                "outline": "#6f787d",
+                "on-secondary": "#ffffff",
+                "status-failed": "#EF4444",
+                "secondary": "#505f76",
+                "surface-container-highest": "#e0e3e5",
+                "inverse-primary": "#81d1f0",
+                "on-primary": "#ffffff",
+                "error": "#ba1a1a",
+                "inverse-on-surface": "#eef1f3",
+                "on-tertiary-fixed": "#2c1600",
+                "surface-dim": "#d7dadd",
+                "status-pending": "#F59E0B",
+                "tertiary-fixed-dim": "#ffb86f",
+                "surface-container-high": "#e6e8eb",
+                "on-error-container": "#93000a",
+                "on-background": "#181c1e",
+                "error-container": "#ffdad6",
+                "outline-variant": "#bec8cd",
+                "on-secondary-fixed": "#0b1c30",
+                "tertiary": "#794602",
+                "secondary-fixed-dim": "#b7c8e1",
+                "on-secondary-fixed-variant": "#38485d",
+                "bg-surface": "#F8FAFC",
+                "surface": "#f7fafc",
+                "on-surface-variant": "#3f484c",
+                "status-ready": "#10B981",
+                "surface-container-low": "#f1f4f6",
+                "on-error": "#ffffff",
+                "inverse-surface": "#2d3133",
+                "on-tertiary": "#ffffff",
+                "secondary-fixed": "#d3e4fe",
+                "surface-container-lowest": "#ffffff",
+                "tertiary-container": "#965e1c"
+            },
+            "borderRadius": {
+                "DEFAULT": "0.25rem",
+                "lg": "0.5rem",
+                "xl": "0.75rem",
+                "full": "9999px"
+            },
+            "spacing": {
+                "stack-lg": "2rem",
+                "section-gap": "4rem",
+                "gutter": "1.5rem",
+                "container-max": "800px",
+                "stack-sm": "0.5rem",
+                "stack-md": "1rem"
+            },
+            "fontFamily": {
+                "body-md": ["Inter"],
+                "label-md": ["Inter"],
+                "headline-md": ["Inter"],
+                "display-lg": ["Inter"],
+                "headline-lg": ["Inter"],
+                "body-lg": ["Inter"],
+                "label-sm": ["Inter"]
+            },
+            "fontSize": {
+                "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+            }
+          }
+        }
+      }
+    </script>
+<style>
+        body {
+            background-color: #F8FAFC;
+            scroll-behavior: smooth;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #F1F5F9;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #CBD5E1;
+            border-radius: 2px;
+        }
+        .reader-view p {
+            margin-bottom: 1.5rem;
+            color: #334155;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body class="font-body-md text-on-surface">
+<!-- TopAppBar from JSON -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-gutter h-16 bg-surface dark:bg-inverse-surface border-b border-border-subtle dark:border-outline-variant">
+<div class="flex items-center gap-8">
+<span class="text-headline-md font-headline-md font-bold text-primary dark:text-primary-fixed">StoryBridge</span>
+<nav class="hidden md:flex gap-6">
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors text-body-md font-body-md" href="#">Recent</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors text-body-md font-body-md" href="#">Support</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-on-surface-variant hover:bg-surface-container rounded-full transition-all">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+</header>
+<main class="pt-24 pb-12 min-h-screen">
+<div class="max-w-[1200px] mx-auto px-gutter grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Main Content Area: Reader View (8 cols) -->
+<section class="lg:col-span-8 flex flex-col gap-6">
+<!-- Breadcrumbs/Context -->
+<div class="flex items-center gap-2 text-label-sm font-label-sm text-on-secondary-container">
+<span>My Library</span>
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+<span class="font-semibold text-primary">The Silent Echoes of Eternity</span>
+</div>
+<!-- Reader Card -->
+<div class="bg-white border border-border-subtle rounded-xl overflow-hidden shadow-[0_4px_20px_-2px_rgba(15,23,42,0.05)]">
+<div class="px-8 py-10 border-b border-border-subtle bg-surface-container-lowest">
+<span class="text-label-md font-label-md text-primary uppercase tracking-widest mb-2 block">Chapter 04</span>
+<h1 class="text-headline-lg font-headline-lg text-on-surface">The Architecture of Shadows</h1>
+</div>
+<div class="px-8 py-12 reader-view text-body-lg font-body-lg max-w-prose mx-auto">
+<p>The dawn did not break; it simply seeped through the heavy curtains like a slow, grey ink. Elias sat at the mahogany desk, his fingers tracing the indentations left by a hundred letters written and never sent. Outside, the city of Aethelgard breathed with the mechanical precision of a clockwork heart, but inside this room, time felt liquid and unreliable.</p>
+<p>He turned the page of the manuscript. The ink was fresh, shimmering slightly in the dim morning light. It spoke of a place that shouldn't exist—a bridge built not of stone or iron, but of memories woven into a physical span. "To cross," the text whispered in his mind, "is to lose who you were, to become who you once hoped to be."</p>
+<p>A sudden knock at the door shattered the silence. Not the polite rap of a servant, but the heavy, rhythmic thud of authority. Elias knew they had found the bridge. Or rather, they had found the map that led to it. He looked at the fireplace, then at the manuscript. The choice was a weight he wasn't sure his tired shoulders could carry anymore.</p>
+<p>The shadows in the corner of the room seemed to lengthen, detaching themselves from the floor. They weren't just absences of light anymore; they were structures, pillars of darkness supporting the ceiling. The architecture of the room was changing, responding to the fear vibrating through his chest. He realized then that the bridge wasn't in some distant forest. It was here, beginning in the very core of his residence.</p>
+<div class="flex justify-center py-8">
+<div class="w-16 h-1 bg-border-subtle rounded-full"></div>
+</div>
+</div>
+</div>
+<!-- Quick Pagination -->
+<div class="flex justify-between items-center bg-white border border-border-subtle p-4 rounded-lg">
+<button class="flex items-center gap-2 text-label-md font-label-md text-secondary hover:text-primary transition-colors">
+<span class="material-symbols-outlined">arrow_back</span>
+                        Previous Chapter
+                    </button>
+<span class="text-label-sm font-label-sm text-outline">Page 1 of 12</span>
+<button class="flex items-center gap-2 text-label-md font-label-md text-secondary hover:text-primary transition-colors">
+                        Next Chapter
+                        <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+</div>
+</section>
+<!-- Sidebar: PDF Export Settings (4 cols) -->
+<aside class="lg:col-span-4 flex flex-col gap-6">
+<div class="sticky top-24">
+<div class="bg-white border border-border-subtle rounded-xl p-6 shadow-[0_4px_20px_-2px_rgba(15,23,42,0.05)]">
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-primary text-[28px]" data-icon="picture_as_pdf">picture_as_pdf</span>
+<h2 class="text-headline-md font-headline-md text-on-surface">PDF Export</h2>
+</div>
+<!-- Configuration Toggles -->
+<div class="space-y-6">
+<div>
+<h3 class="text-label-md font-label-md text-outline uppercase mb-4">Settings</h3>
+<div class="space-y-4">
+<label class="flex items-center justify-between cursor-pointer group">
+<span class="text-body-md font-body-md text-on-surface">Include Cover Page</span>
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</label>
+<label class="flex items-center justify-between cursor-pointer group">
+<span class="text-body-md font-body-md text-on-surface">Generate Table of Contents</span>
+<div class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</div>
+</label>
+</div>
+</div>
+<!-- Chapter Selection List -->
+<div>
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-label-md font-label-md text-outline uppercase">Select Chapters</h3>
+<button class="text-label-sm font-label-sm text-primary hover:underline">Select All</button>
+</div>
+<div class="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+<!-- Chapter Item -->
+<label class="flex items-center gap-3 p-3 rounded-lg border border-border-subtle bg-surface-container-lowest hover:border-primary/30 transition-colors cursor-pointer group">
+<input checked="" class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<div class="flex flex-col">
+<span class="text-label-sm font-label-sm text-outline">CH 01</span>
+<span class="text-body-md font-body-md text-on-surface group-hover:text-primary transition-colors">The First Whisper</span>
+</div>
+</label>
+<!-- Chapter Item -->
+<label class="flex items-center gap-3 p-3 rounded-lg border border-border-subtle bg-surface-container-lowest hover:border-primary/30 transition-colors cursor-pointer group">
+<input checked="" class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<div class="flex flex-col">
+<span class="text-label-sm font-label-sm text-outline">CH 02</span>
+<span class="text-body-md font-body-md text-on-surface group-hover:text-primary transition-colors">Shadows of Aethelgard</span>
+</div>
+</label>
+<!-- Chapter Item -->
+<label class="flex items-center gap-3 p-3 rounded-lg border border-border-subtle bg-surface-container-lowest hover:border-primary/30 transition-colors cursor-pointer group">
+<input checked="" class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<div class="flex flex-col">
+<span class="text-label-sm font-label-sm text-outline">CH 03</span>
+<span class="text-body-md font-body-md text-on-surface group-hover:text-primary transition-colors">Clockwork Precisions</span>
+</div>
+</label>
+<!-- Chapter Item (Active) -->
+<label class="flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary-container/10 transition-colors cursor-pointer group">
+<input checked="" class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<div class="flex flex-col">
+<span class="text-label-sm font-label-sm text-primary">CH 04 (Current)</span>
+<span class="text-body-md font-body-md text-on-surface font-semibold">The Architecture of Shadows</span>
+</div>
+</label>
+<!-- Chapter Item -->
+<label class="flex items-center gap-3 p-3 rounded-lg border border-border-subtle bg-surface-container-lowest hover:border-primary/30 transition-colors cursor-pointer group">
+<input class="w-4 h-4 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<div class="flex flex-col">
+<span class="text-label-sm font-label-sm text-outline">CH 05</span>
+<span class="text-body-md font-body-md text-on-surface group-hover:text-primary transition-colors">The Memory Bridge</span>
+</div>
+</label>
+</div>
+</div>
+</div>
+<!-- CTA Section -->
+<div class="mt-8 pt-6 border-t border-border-subtle">
+<div class="flex items-center justify-between mb-4">
+<span class="text-label-md font-label-md text-secondary">Est. File Size</span>
+<span class="text-label-md font-label-md font-bold text-on-surface">1.2 MB</span>
+</div>
+<button class="w-full bg-primary text-on-primary py-4 rounded-lg flex items-center justify-center gap-2 font-headline-md text-[18px] hover:bg-surface-tint transition-all shadow-lg shadow-primary/20 active:scale-[0.98]">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+                                Generate PDF
+                            </button>
+<p class="text-[11px] text-center text-outline mt-3 font-label-sm">Conversion takes approx. 15-30 seconds</p>
+</div>
+</div>
+<!-- Help Card -->
+<div class="mt-6 p-4 bg-secondary-container/30 border border-secondary-container rounded-lg flex gap-4 items-start">
+<span class="material-symbols-outlined text-secondary" data-icon="info">info</span>
+<div>
+<p class="text-label-md font-label-md text-on-secondary-container font-semibold">Pro Tip</p>
+<p class="text-label-sm font-label-sm text-on-secondary-container opacity-80 mt-1">Check 'Include Cover' to use the story's original metadata and summary as the first page.</p>
+</div>
+</div>
+</div>
+</aside>
+</div>
+</main>
+<!-- Footer from JSON -->
+<footer class="w-full py-8 px-gutter border-t border-border-subtle dark:border-outline-variant bg-surface-container-low dark:bg-inverse-surface">
+<div class="max-w-container-max mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+<span class="text-label-md font-label-md font-bold text-secondary">StoryBridge</span>
+<div class="flex gap-6">
+<a class="text-label-sm font-label-sm text-on-secondary-container dark:text-on-secondary-fixed-variant hover:underline" href="#">Privacy Policy</a>
+<a class="text-label-sm font-label-sm text-on-secondary-container dark:text-on-secondary-fixed-variant hover:underline" href="#">Terms of Service</a>
+<a class="text-label-sm font-label-sm text-on-secondary-container dark:text-on-secondary-fixed-variant hover:underline" href="#">Github</a>
+</div>
+<span class="text-label-sm font-label-sm text-secondary dark:text-secondary-fixed">© 2024 StoryBridge. Anonymous &amp; Encrypted.</span>
+</div>
+</footer>
+<script>
+        // Micro-interaction: Update Estimated File Size based on checkbox count
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        const sizeDisplay = document.querySelector('.mt-8 .text-on-surface');
+        
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', () => {
+                const checkedCount = document.querySelectorAll('input[type="checkbox"]:checked').length;
+                const estimatedSize = (checkedCount * 0.3).toFixed(1);
+                if(sizeDisplay) {
+                    sizeDisplay.innerText = `${estimatedSize} MB`;
+                }
+            });
+        });
+
+        // Simple button active state visual feedback
+        const primaryCta = document.querySelector('button.bg-primary');
+        primaryCta.addEventListener('click', function() {
+            const originalContent = this.innerHTML;
+            this.innerHTML = '<span class="material-symbols-outlined animate-spin">sync</span> Processing...';
+            this.disabled = true;
+            this.style.opacity = '0.7';
+            
+            setTimeout(() => {
+                this.innerHTML = '<span class="material-symbols-outlined">check_circle</span> Ready for Download';
+                this.style.backgroundColor = '#10B981';
+                this.style.opacity = '1';
+                setTimeout(() => {
+                    this.innerHTML = originalContent;
+                    this.style.backgroundColor = '';
+                    this.disabled = false;
+                }, 3000);
+            }, 2000);
+        });
+    </script>
+</body></html>

@@ -2,8 +2,10 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CrawlerService } from '../crawlers/crawler.service';
 import { CreateCrawlJobDto, CrawlMode } from './dto/create-crawl-job.dto';
 
 export interface CrawlJobResponse {
@@ -22,7 +24,12 @@ export interface CrawlJobResponse {
 
 @Injectable()
 export class CrawlJobsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(CrawlJobsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly crawlerService: CrawlerService,
+  ) {}
 
   async createCrawlJob(
     storyId: string,
@@ -39,6 +46,20 @@ export class CrawlJobsService {
       });
     }
 
+    const runningJob = await this.prisma.crawlJob.findFirst({
+      where: {
+        storyId,
+        status: { in: ['pending', 'running'] },
+      },
+    });
+
+    if (runningJob) {
+      throw new ConflictException({
+        code: 'CRAWL_JOB_IN_PROGRESS',
+        message: 'A crawl job is already in progress for this story',
+      });
+    }
+
     const crawlJob = await this.prisma.crawlJob.create({
       data: {
         storyId,
@@ -48,7 +69,24 @@ export class CrawlJobsService {
       },
     });
 
+    await this.prisma.story.update({
+      where: { id: storyId },
+      data: { status: 'crawling' },
+    });
+
+    this.executeCrawlAsync(crawlJob.id, dto.mode);
+
     return this.mapCrawlJob(crawlJob, dto.mode);
+  }
+
+  private executeCrawlAsync(jobId: string, mode: CrawlMode): void {
+    setImmediate(async () => {
+      try {
+        await this.crawlerService.executeCrawlJob(jobId, mode);
+      } catch (error) {
+        this.logger.error(`Failed to execute crawl job ${jobId}:`, error);
+      }
+    });
   }
 
   async getCrawlJobsByStoryId(storyId: string): Promise<CrawlJobResponse[]> {

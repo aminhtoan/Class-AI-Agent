@@ -15,6 +15,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
 
+    // Check if headers already sent (e.g., SSE streams)
+    if (response.headersSent) {
+      this.logger.error('Headers already sent, cannot send error response:', exception);
+      return;
+    }
+
     if (exception instanceof HttpException) {
       const status = exception.getStatus();
       const payload = exception.getResponse();

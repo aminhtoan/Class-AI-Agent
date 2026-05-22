@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "on-primary-container": "#d3f1ff",
+                    "primary-fixed": "#b9eaff",
+                    "secondary-container": "#d0e1fb",
+                    "primary-container": "#0e7490",
+                    "border-subtle": "#E2E8F0",
+                    "tertiary-fixed": "#ffdcbd",
+                    "background": "#f7fafc",
+                    "surface-container": "#ebeef0",
+                    "surface-variant": "#e0e3e5",
+                    "on-tertiary-fixed-variant": "#693c00",
+                    "on-primary-fixed-variant": "#004d62",
+                    "on-surface": "#181c1e",
+                    "primary": "#005a71",
+                    "surface-bright": "#f7fafc",
+                    "on-primary-fixed": "#001f29",
+                    "on-tertiary-container": "#ffe8d6",
+                    "primary-fixed-dim": "#81d1f0",
+                    "surface-tint": "#006781",
+                    "on-secondary-container": "#54647a",
+                    "outline": "#6f787d",
+                    "on-secondary": "#ffffff",
+                    "status-failed": "#EF4444",
+                    "secondary": "#505f76",
+                    "surface-container-highest": "#e0e3e5",
+                    "inverse-primary": "#81d1f0",
+                    "on-primary": "#ffffff",
+                    "error": "#ba1a1a",
+                    "inverse-on-surface": "#eef1f3",
+                    "on-tertiary-fixed": "#2c1600",
+                    "surface-dim": "#d7dadd",
+                    "status-pending": "#F59E0B",
+                    "tertiary-fixed-dim": "#ffb86f",
+                    "surface-container-high": "#e6e8eb",
+                    "on-error-container": "#93000a",
+                    "on-background": "#181c1e",
+                    "error-container": "#ffdad6",
+                    "outline-variant": "#bec8cd",
+                    "on-secondary-fixed": "#0b1c30",
+                    "tertiary": "#794602",
+                    "secondary-fixed-dim": "#b7c8e1",
+                    "on-secondary-fixed-variant": "#38485d",
+                    "bg-surface": "#F8FAFC",
+                    "surface": "#f7fafc",
+                    "on-surface-variant": "#3f484c",
+                    "status-ready": "#10B981",
+                    "surface-container-low": "#f1f4f6",
+                    "on-error": "#ffffff",
+                    "inverse-surface": "#2d3133",
+                    "on-tertiary": "#ffffff",
+                    "secondary-fixed": "#d3e4fe",
+                    "surface-container-lowest": "#ffffff",
+                    "tertiary-container": "#965e1c"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "stack-lg": "2rem",
+                    "section-gap": "4rem",
+                    "gutter": "1.5rem",
+                    "container-max": "800px",
+                    "stack-sm": "0.5rem",
+                    "stack-md": "1rem"
+            },
+            "fontFamily": {
+                    "body-md": ["Inter"],
+                    "label-md": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "headline-lg-mobile": ["Inter"],
+                    "headline-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "label-sm": ["Inter"]
+            },
+            "fontSize": {
+                    "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                    "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.05em", "fontWeight": "500"}],
+                    "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                    "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                    "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                    "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                    "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        .progress-gradient {
+            background: linear-gradient(90deg, #005a71 0%, #0e7490 100%);
+        }
+        .success-float {
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md selection:bg-primary-container selection:text-white">
+<!-- TopAppBar -->
+<nav class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-gutter h-16 bg-surface dark:bg-inverse-surface border-b border-border-subtle dark:border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="text-headline-md font-headline-md font-bold text-primary dark:text-primary-fixed">StoryBridge</span>
+</div>
+<div class="hidden md:flex items-center gap-8">
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors font-body-md" href="#">Recent</a>
+<a class="text-on-surface-variant dark:text-outline-variant hover:text-primary dark:hover:text-primary-fixed transition-colors font-body-md" href="#">Support</a>
+</div>
+<div class="flex items-center gap-4">
+<button class="p-2 text-primary dark:text-primary-fixed hover:bg-surface-container transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="pt-32 pb-section-gap px-gutter min-h-screen flex flex-col items-center">
+<div class="w-full max-w-container-max">
+<!-- Progress State (Initial View) -->
+<div class="flex flex-col items-center text-center" id="processing-view">
+<div class="mb-stack-lg relative w-full aspect-video md:aspect-[21/9] rounded-xl overflow-hidden bg-surface-container-low border border-border-subtle group">
+<img alt="Document Generation" class="w-full h-full object-cover opacity-80 mix-blend-multiply" data-alt="A sophisticated minimalist photography of high-quality cream paper sheets elegantly stacked in a sunlit, contemporary office space. The lighting is soft and architectural, casting gentle shadows that emphasize the texture of the professional documents. The color palette is composed of serene whites, subtle greys, and warm wood tones, creating an atmosphere of intellectual clarity and professional focus." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJe0lsXNYOrRpasFpjkHyP-pHwAzK94xCr9SoUyvU-C5BEuR5fwxYdSluiZq1raczK_BLS_QTP53YZsBDPXJpyTEZbnrqGNYRA8sXxTF2S2X5tLvaf-h3_M_gN2BFLwsblWsRM3d0-HiSlCB-uG5exkwKHdg1-0LvUaFv8XeETyKMsWZJsNNISuHO-BRaxvWU5j6YZ5UrxYJPmc5U0gG8OHuGoZBBqg7IKyJ7gcP9o6D3eEZ55o1sVEs7kg8e-ARfFh00B9lvdurAW"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="bg-surface/90 backdrop-blur-md px-6 py-4 rounded-lg border border-border-subtle shadow-lg flex items-center gap-4">
+<span class="material-symbols-outlined animate-spin text-primary" data-icon="sync">sync</span>
+<span class="text-label-md font-label-md text-on-surface">Assembling Chapters...</span>
+</div>
+</div>
+</div>
+<div class="w-full text-left space-y-stack-md">
+<div class="flex justify-between items-end">
+<h1 class="text-headline-lg font-headline-lg text-on-surface">Beyond the Silent Horizon</h1>
+<span class="text-label-md font-label-md text-primary" id="progress-percent">64%</span>
+</div>
+<div class="w-full h-2 bg-surface-container-low rounded-full overflow-hidden">
+<div class="h-full progress-gradient transition-all duration-500 ease-out" id="progress-bar" style="width: 64%;"></div>
+</div>
+<div class="flex justify-between text-on-surface-variant">
+<span class="text-label-sm font-label-sm">Processing Meta-tags &amp; Typography</span>
+<span class="text-label-sm font-label-sm">14 of 22 Chapters</span>
+</div>
+</div>
+</div>
+<!-- Success State (Hidden initially, shown via JS) -->
+<div class="hidden flex flex-col items-center text-center transition-all duration-700 opacity-0 transform translate-y-4" id="success-view">
+<div class="success-float mb-stack-lg">
+<div class="w-24 h-24 rounded-full bg-status-ready/10 flex items-center justify-center border-4 border-status-ready/20">
+<span class="material-symbols-outlined text-status-ready !text-5xl" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+</div>
+<h1 class="text-headline-lg font-headline-lg text-on-surface mb-stack-sm">Document Ready</h1>
+<p class="text-body-lg font-body-lg text-on-surface-variant mb-stack-lg max-w-md mx-auto">
+                    "Beyond the Silent Horizon" has been successfully converted into a high-fidelity PDF document.
+                </p>
+<!-- Download Card -->
+<div class="w-full bg-white rounded-xl border border-border-subtle p-stack-lg shadow-sm mb-section-gap">
+<div class="flex flex-col md:flex-row items-center gap-gutter">
+<div class="w-16 h-16 bg-primary-container/10 rounded-lg flex items-center justify-center text-primary">
+<span class="material-symbols-outlined !text-3xl" data-icon="picture_as_pdf">picture_as_pdf</span>
+</div>
+<div class="text-left flex-1">
+<h3 class="text-headline-md font-headline-md text-on-surface truncate max-w-xs md:max-w-none">beyond_the_silent_horizon_full.pdf</h3>
+<p class="text-label-md font-label-md text-on-surface-variant uppercase tracking-wider">4.2 MB • 158 Pages • High-Res Graphics</p>
+</div>
+<button class="w-full md:w-auto px-8 h-14 bg-primary text-white rounded-lg font-label-md flex items-center justify-center gap-3 hover:bg-primary/90 transition-all active:scale-[0.98] shadow-md shadow-primary/20">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+                            Download PDF
+                        </button>
+</div>
+</div>
+<!-- Secondary Actions -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-stack-md w-full">
+<button class="flex items-center justify-center gap-3 h-14 rounded-lg border border-border-subtle hover:bg-surface-container-low transition-colors text-on-surface font-label-md">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+                        Copy Anonymous Link
+                    </button>
+<button class="flex items-center justify-center gap-3 h-14 rounded-lg border border-border-subtle hover:bg-surface-container-low transition-colors text-on-surface font-label-md">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+                        Back to My Stories
+                    </button>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer -->
+<footer class="w-full border-t border-border-subtle dark:border-outline-variant bg-surface-container-low dark:bg-inverse-surface">
+<div class="w-full py-8 px-gutter flex flex-col md:flex-row justify-between items-center max-w-container-max mx-auto gap-4">
+<div class="flex flex-col items-center md:items-start">
+<span class="text-label-md font-label-md font-bold text-secondary mb-1">StoryBridge</span>
+<span class="text-label-sm font-label-sm text-on-secondary-container dark:text-on-secondary-fixed-variant">© 2024 StoryBridge. Anonymous &amp; Encrypted.</span>
+</div>
+<div class="flex gap-6">
+<a class="text-label-sm font-label-sm text-on-secondary-container dark:text-on-secondary-fixed-variant hover:underline" href="#">Privacy Policy</a>
+<a class="text-label-sm font-label-sm text-on-secondary-container dark:text-on-secondary-fixed-variant hover:underline" href="#">Terms of Service</a>
+<a class="text-label-sm font-label-sm text-on-secondary-container dark:text-on-secondary-fixed-variant hover:underline" href="#">Github</a>
+</div>
+</div>
+</footer>
+<script>
+        // Micro-interaction: Simulate the loading progress
+        const progressBar = document.getElementById('progress-bar');
+        const progressPercent = document.getElementById('progress-percent');
+        const processingView = document.getElementById('processing-view');
+        const successView = document.getElementById('success-view');
+
+        let currentProgress = 64;
+
+        const interval = setInterval(() => {
+            if (currentProgress >= 100) {
+                clearInterval(interval);
+                showSuccessState();
+                return;
+            }
+            
+            // Random incremental steps
+            currentProgress += Math.floor(Math.random() * 8) + 1;
+            if (currentProgress > 100) currentProgress = 100;
+            
+            progressBar.style.width = currentProgress + '%';
+            progressPercent.innerText = currentProgress + '%';
+        }, 600);
+
+        function showSuccessState() {
+            processingView.classList.add('opacity-0', 'transition-all', 'duration-500');
+            setTimeout(() => {
+                processingView.style.display = 'none';
+                successView.classList.remove('hidden');
+                // Trigger reflow for animation
+                void successView.offsetWidth;
+                successView.classList.remove('opacity-0', 'translate-y-4');
+                successView.classList.add('opacity-100', 'translate-y-0');
+            }, 500);
+        }
+
+        // Share Link Copy Interaction
+        const shareBtn = document.querySelector('button:has([data-icon="share"])');
+        shareBtn.addEventListener('click', () => {
+            const originalContent = shareBtn.innerHTML;
+            shareBtn.innerHTML = `<span class="material-symbols-outlined text-status-ready">check</span> Copied!`;
+            setTimeout(() => {
+                shareBtn.innerHTML = originalContent;
+            }, 2000);
+        });
+    </script>
+</body></html>

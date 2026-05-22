@@ -18,13 +18,17 @@ import {
 
 const ANONYMOUS_USER_EMAIL = "anonymous@story-to-pdf.local";
 
-type PrismaLikeClient = {
-  story: any;
-  user: any;
-  $transaction: any;
+type StoryWithChapterCount = {
+  id: string;
+  title: string | null;
+  author: string | null;
+  sourceUrl: string;
+  language: string | null;
+  status: string;
+  createdAt: Date;
+  updatedAt: Date;
+  _count: { chapters: number };
 };
-
-type StoryWithChapterCount = any;
 
 export interface StoryListItem {
   id: string;
@@ -44,7 +48,7 @@ export class StoriesService {
     getEnv().ALLOWED_DOMAINS,
   );
 
-  constructor(private readonly prisma: PrismaService & PrismaLikeClient) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async createStory(dto: CreateStoryDto) {
     const parsedUrl = parseStorySourceUrl(dto.sourceUrl);
