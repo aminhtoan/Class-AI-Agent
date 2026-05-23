@@ -8,6 +8,8 @@ export interface Story {
   sourceUrl: string;
   title: string | null;
   author: string | null;
+  coverUrl: string | null;
+  description: string | null;
   language: string | null;
   status: StoryStatus;
   chapterCount?: number;
@@ -49,6 +51,8 @@ export interface CrawlJob {
   errorMessage?: string | null;
   startedAt?: string | null;
   finishedAt?: string | null;
+  elapsedMs?: number;
+  totalMs?: number | null;
   createdAt: string;
 }
 

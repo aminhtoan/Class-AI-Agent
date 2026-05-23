@@ -2,6 +2,8 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { Crawler, TocEntry, ChapterData } from './crawler.interface';
 import { SangtacvietCrawler } from './sources/sangtacviet.crawler';
+import { XtruyenCrawler } from './sources/xtruyen.crawler';
+import { politeDelay } from './retry.util';
 
 type CrawlMode = 'toc-only' | 'chapters-only' | 'toc-and-chapters';
 
@@ -13,6 +15,23 @@ interface CrawlProgress {
   currentTask?: string;
 }
 
+interface DomainConfig {
+  concurrency: number;
+  politeDelayEvery: number;
+}
+
+const DOMAIN_CONFIG: Record<string, DomainConfig> = {
+  'truyenfull.vn': { concurrency: 10, politeDelayEvery: 20 },
+  'metruyenchu.com': { concurrency: 8, politeDelayEvery: 15 },
+  'sangtacviet.app': { concurrency: 3, politeDelayEvery: 10 },
+  'xtruyen.vn': { concurrency: 8, politeDelayEvery: 15 },
+  default: { concurrency: 5, politeDelayEvery: 15 },
+};
+
+function getDomainConfig(host: string): DomainConfig {
+  return DOMAIN_CONFIG[host] ?? DOMAIN_CONFIG['default'];
+}
+
 @Injectable()
 export class CrawlerService {
   private readonly logger = new Logger(CrawlerService.name);
@@ -20,6 +39,7 @@ export class CrawlerService {
 
   constructor(private readonly prisma: PrismaService) {
     this.crawlers.push(new SangtacvietCrawler());
+    this.crawlers.push(new XtruyenCrawler());
   }
 
   getCrawlerForHost(host: string): Crawler | null {
@@ -81,6 +101,8 @@ export class CrawlerService {
               title: metadataResult.data.title,
               author: metadataResult.data.author,
               language: metadataResult.data.language,
+              coverUrl: metadataResult.data.coverUrl,
+              description: metadataResult.data.description,
             },
           });
         }
@@ -134,136 +156,167 @@ export class CrawlerService {
           data: { progressTotal: tocEntries.length },
         });
 
-        for (let i = 0; i < tocEntries.length; i++) {
-          const entry = tocEntries[i];
+        // Get domain config for concurrency settings
+        const domainConfig = getDomainConfig(story.sourceHost);
+        const pLimit = (await import('p-limit')).default;
+        const limit = pLimit(domainConfig.concurrency);
+        let progressDone = 0;
+        let cancelled = false;
 
-          const currentJob = await this.prisma.crawlJob.findUnique({
-            where: { id: jobId },
-            select: { status: true },
-          });
+        this.logger.log(
+          `Crawling ${tocEntries.length} chapters (concurrency=${domainConfig.concurrency})`,
+        );
 
-          if (currentJob?.status === 'cancelled') {
-            this.logger.log(`Crawl job ${jobId} was cancelled`);
-            return;
-          }
+        await Promise.all(
+          tocEntries.map((entry, index) =>
+            limit(async () => {
+              // Check cancel flag
+              if (cancelled) return;
 
-          const existingChapter = await this.prisma.chapter.findUnique({
-            where: {
-              storyId_sourceUrl: {
-                storyId: story.id,
-                sourceUrl: entry.url,
-              },
-            },
-            include: { content: true },
-          });
+              if (index % 10 === 0) {
+                const currentJob = await this.prisma.crawlJob.findUnique({
+                  where: { id: jobId },
+                  select: { status: true },
+                });
+                if (currentJob?.status === 'cancelled') {
+                  cancelled = true;
+                  this.logger.log(`Crawl job ${jobId} was cancelled`);
+                  return;
+                }
+              }
 
-          if (existingChapter?.content) {
-            await this.prisma.crawlJob.update({
-              where: { id: jobId },
-              data: { progressDone: i + 1 },
-            });
-            continue;
-          }
-
-          try {
-            const chapterResult = await crawler.fetchChapter(entry.url);
-
-            if (chapterResult.success && chapterResult.data) {
-              const chapterData = chapterResult.data;
-
-              const chapter = await this.prisma.chapter.upsert({
+              // Skip if already fetched (resume support)
+              const existingChapter = await this.prisma.chapter.findUnique({
                 where: {
                   storyId_sourceUrl: {
                     storyId: story.id,
                     sourceUrl: entry.url,
                   },
                 },
-                create: {
-                  storyId: story.id,
-                  title: chapterData.title || entry.title,
-                  sourceUrl: entry.url,
-                  status: 'fetched',
-                  fetchedAt: new Date(),
-                  publishedAt: chapterData.publishedAt,
-                },
-                update: {
-                  title: chapterData.title || entry.title,
-                  status: 'fetched',
-                  fetchedAt: new Date(),
-                  publishedAt: chapterData.publishedAt,
-                },
+                include: { content: true },
               });
 
-              await this.prisma.chapterContent.upsert({
-                where: { chapterId: chapter.id },
-                create: {
-                  chapterId: chapter.id,
-                  contentText: chapterData.contentText,
-                  contentHtml: chapterData.contentHtml,
-                  wordCount: chapterData.wordCount,
-                },
-                update: {
-                  contentText: chapterData.contentText,
-                  contentHtml: chapterData.contentHtml,
-                  wordCount: chapterData.wordCount,
-                },
-              });
-            } else {
-              await this.prisma.chapter.upsert({
-                where: {
-                  storyId_sourceUrl: {
-                    storyId: story.id,
-                    sourceUrl: entry.url,
+              if (existingChapter?.content) {
+                progressDone++;
+                await this.prisma.crawlJob.update({
+                  where: { id: jobId },
+                  data: { progressDone },
+                });
+                return;
+              }
+
+              // Add polite delay every N chapters to avoid rate limiting
+              if (index > 0 && index % domainConfig.politeDelayEvery === 0) {
+                await politeDelay();
+              }
+
+              try {
+                const chapterResult = await crawler.fetchChapter(entry.url);
+
+                if (chapterResult.success && chapterResult.data) {
+                  const chapterData = chapterResult.data;
+
+                  const chapter = await this.prisma.chapter.upsert({
+                    where: {
+                      storyId_sourceUrl: {
+                        storyId: story.id,
+                        sourceUrl: entry.url,
+                      },
+                    },
+                    create: {
+                      storyId: story.id,
+                      title: chapterData.title || entry.title,
+                      sourceUrl: entry.url,
+                      status: 'fetched',
+                      fetchedAt: new Date(),
+                      publishedAt: chapterData.publishedAt,
+                    },
+                    update: {
+                      title: chapterData.title || entry.title,
+                      status: 'fetched',
+                      fetchedAt: new Date(),
+                      publishedAt: chapterData.publishedAt,
+                    },
+                  });
+
+                  await this.prisma.chapterContent.upsert({
+                    where: { chapterId: chapter.id },
+                    create: {
+                      chapterId: chapter.id,
+                      contentText: chapterData.contentText,
+                      contentHtml: chapterData.contentHtml,
+                      wordCount: chapterData.wordCount,
+                    },
+                    update: {
+                      contentText: chapterData.contentText,
+                      contentHtml: chapterData.contentHtml,
+                      wordCount: chapterData.wordCount,
+                    },
+                  });
+
+                  this.logger.debug(`✓ Chapter ${entry.position}: ${entry.title}`);
+                } else {
+                  await this.prisma.chapter.upsert({
+                    where: {
+                      storyId_sourceUrl: {
+                        storyId: story.id,
+                        sourceUrl: entry.url,
+                      },
+                    },
+                    create: {
+                      storyId: story.id,
+                      title: entry.title,
+                      sourceUrl: entry.url,
+                      status: 'failed',
+                    },
+                    update: {
+                      status: 'failed',
+                    },
+                  });
+                  this.logger.warn(`✗ Chapter ${entry.position} failed: ${chapterResult.error?.message}`);
+                }
+              } catch (chapterError) {
+                this.logger.warn(`✗ Chapter ${entry.position} error: ${chapterError}`);
+                await this.prisma.chapter.upsert({
+                  where: {
+                    storyId_sourceUrl: {
+                      storyId: story.id,
+                      sourceUrl: entry.url,
+                    },
                   },
-                },
-                create: {
-                  storyId: story.id,
-                  title: entry.title,
-                  sourceUrl: entry.url,
-                  status: 'failed',
-                },
-                update: {
-                  status: 'failed',
-                },
+                  create: {
+                    storyId: story.id,
+                    title: entry.title,
+                    sourceUrl: entry.url,
+                    status: 'failed',
+                  },
+                  update: {
+                    status: 'failed',
+                  },
+                });
+              }
+
+              progressDone++;
+              await this.prisma.crawlJob.update({
+                where: { id: jobId },
+                data: { progressDone },
               });
-            }
-          } catch (chapterError) {
-            this.logger.warn(`Failed to fetch chapter ${entry.url}: ${chapterError}`);
-            await this.prisma.chapter.upsert({
-              where: {
-                storyId_sourceUrl: {
-                  storyId: story.id,
-                  sourceUrl: entry.url,
-                },
-              },
-              create: {
-                storyId: story.id,
-                title: entry.title,
-                sourceUrl: entry.url,
-                status: 'failed',
-              },
-              update: {
-                status: 'failed',
-              },
-            });
-          }
 
-          await this.prisma.crawlJob.update({
-            where: { id: jobId },
-            data: { progressDone: i + 1 },
-          });
+              if (onProgress) {
+                onProgress({
+                  jobId,
+                  status: 'running',
+                  progressTotal: tocEntries.length,
+                  progressDone,
+                  currentTask: `Fetching chapter ${progressDone}/${tocEntries.length}`,
+                });
+              }
+            }),
+          ),
+        );
 
-          if (onProgress) {
-            onProgress({
-              jobId,
-              status: 'running',
-              progressTotal: tocEntries.length,
-              progressDone: i + 1,
-              currentTask: `Fetching chapter ${i + 1}/${tocEntries.length}`,
-            });
-          }
-
-          await this.delay(500 + Math.random() * 500);
+        if (cancelled) {
+          return;
         }
       }
 
@@ -313,9 +366,5 @@ export class CrawlerService {
         data: { status: 'failed' },
       });
     }
-  }
-
-  private delay(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

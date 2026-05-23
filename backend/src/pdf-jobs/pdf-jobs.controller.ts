@@ -8,6 +8,7 @@ import {
   Post,
   Res,
   Sse,
+  StreamableFile,
 } from '@nestjs/common';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { Response } from 'express';
@@ -71,30 +72,25 @@ export class PdfJobsController {
   @ApiOperation({ summary: 'Stream PDF job progress via SSE' })
   @ApiResponse({ status: 200, description: 'SSE stream' })
   @ApiResponse({ status: 404, description: 'PDF job not found' })
-  async streamProgress(
-    @Param('id') id: string,
-    @Res() res: Response,
-  ): Promise<Observable<MessageEvent>> {
-    await this.pdfJobsService.getJobForProgress(id);
-
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
-
+  streamProgress(@Param('id') id: string): Observable<MessageEvent> {
     const finishedStatuses = ['succeeded', 'failed', 'cancelled'];
 
     return interval(1000).pipe(
       startWith(0),
       switchMap(async () => {
-        const progress = await this.pdfJobsService.getJobForProgress(id);
-        return progress;
+        try {
+          const progress = await this.pdfJobsService.getJobForProgress(id);
+          return { success: true, data: progress };
+        } catch (error) {
+          return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        }
       }),
-      map((progress) => ({
-        data: JSON.stringify(progress),
+      map((result) => ({
+        data: JSON.stringify(result.success ? result.data : { status: 'error', error: result.error }),
       })),
       takeWhile((event) => {
         const data = JSON.parse(event.data as string);
+        if (data.status === 'error') return false;
         return !finishedStatuses.includes(data.status);
       }, true),
     );

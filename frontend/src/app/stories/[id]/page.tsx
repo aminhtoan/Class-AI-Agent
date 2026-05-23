@@ -11,9 +11,24 @@ import {
   useCrawlJobs,
   useCreateCrawlJob,
   useCancelCrawlJob,
+  useDeleteStory,
   useJobProgress,
 } from '@/lib/hooks';
 import type { Chapter, ChapterStatus, CrawlMode } from '@/types/api';
+
+function formatTime(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  if (hours > 0) {
+    return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds % 60}s`;
+  }
+  return `${seconds}s`;
+}
 
 function ChapterRow({ chapter, position }: { chapter: Chapter; position: number }) {
   const isProcessing = chapter.status === 'pending';
@@ -53,6 +68,8 @@ export default function StoryDetailPage() {
   const router = useRouter();
   const storyId = params.id as string;
 
+  const [completedCrawlTime, setCompletedCrawlTime] = useState<number | null>(null);
+
   const { data: story, isLoading: storyLoading, error: storyError } = useStory(storyId);
   const { data: chaptersData, isLoading: chaptersLoading } = useStoryChapters(storyId, {
     limit: 50,
@@ -61,11 +78,21 @@ export default function StoryDetailPage() {
 
   const createCrawlJob = useCreateCrawlJob();
   const cancelCrawlJob = useCancelCrawlJob();
+  const deleteStory = useDeleteStory();
 
   const activeCrawlJob = crawlJobs?.find(
     (job) => job.status === 'pending' || job.status === 'running'
   );
   const progress = useJobProgress('crawl', activeCrawlJob?.id ?? null);
+
+  // Track when crawl completes to show total time
+  useEffect(() => {
+    if (progress?.status === 'succeeded' && progress.totalMs) {
+      setCompletedCrawlTime(progress.totalMs);
+      const timer = setTimeout(() => setCompletedCrawlTime(null), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [progress?.status, progress?.totalMs]);
 
   const handleStartCrawl = () => {
     createCrawlJob.mutate({
@@ -77,6 +104,16 @@ export default function StoryDetailPage() {
   const handleCancelCrawl = () => {
     if (activeCrawlJob) {
       cancelCrawlJob.mutate(activeCrawlJob.id);
+    }
+  };
+
+  const handleDeleteStory = () => {
+    if (confirm('Are you sure you want to delete this story?')) {
+      deleteStory.mutate(storyId, {
+        onSuccess: () => {
+          router.push('/');
+        },
+      });
     }
   };
 
@@ -181,6 +218,16 @@ export default function StoryDetailPage() {
                   Cancel Job
                 </Button>
               )}
+              {!activeCrawlJob && (
+                <Button
+                  variant="outline"
+                  icon="delete"
+                  onClick={handleDeleteStory}
+                  loading={deleteStory.isPending}
+                >
+                  Delete
+                </Button>
+              )}
             </div>
           </div>
 
@@ -251,7 +298,40 @@ export default function StoryDetailPage() {
                     </span>
                   </div>
                 </div>
-                <p className="text-xs font-medium italic text-outline">SSE stream active</p>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[18px]">
+                    timer
+                  </span>
+                  <span className="text-xs font-medium text-primary">
+                    {progress?.elapsedMs ? formatTime(progress.elapsedMs) : '0s'}
+                  </span>
+                </div>
+              </div>
+            </Card>
+          </section>
+        )}
+
+        {completedCrawlTime && !activeCrawlJob && (
+          <section className="mb-stack-lg">
+            <Card className="p-4 bg-status-ready/10 border-status-ready/30">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="material-symbols-outlined text-status-ready text-2xl">
+                    check_circle
+                  </span>
+                  <div>
+                    <p className="text-sm font-semibold text-on-surface">Crawl completed successfully!</p>
+                    <p className="text-xs text-on-surface-variant">
+                      Fetched {chapters.length} chapters in {formatTime(completedCrawlTime)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setCompletedCrawlTime(null)}
+                  className="text-outline hover:text-on-surface"
+                >
+                  <span className="material-symbols-outlined text-[20px]">close</span>
+                </button>
               </div>
             </Card>
           </section>

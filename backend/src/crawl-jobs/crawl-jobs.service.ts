@@ -19,6 +19,8 @@ export interface CrawlJobResponse {
   errorMessage: string | null;
   startedAt: Date | null;
   finishedAt: Date | null;
+  elapsedMs: number;
+  totalMs: number | null;
   createdAt: Date;
 }
 
@@ -167,10 +169,22 @@ export class CrawlJobsService {
       });
     }
 
+    const now = new Date();
+    const startedAt = crawlJob.startedAt || crawlJob.createdAt;
+    const elapsedMs = now.getTime() - startedAt.getTime();
+    const finishedAt = crawlJob.finishedAt;
+    const totalMs = finishedAt
+      ? finishedAt.getTime() - startedAt.getTime()
+      : null;
+
     return {
       progressDone: crawlJob.progressDone,
       progressTotal: crawlJob.progressTotal,
       status: crawlJob.status,
+      startedAt: startedAt.toISOString(),
+      finishedAt: finishedAt?.toISOString() || null,
+      elapsedMs,
+      totalMs,
     };
   }
 
@@ -189,6 +203,13 @@ export class CrawlJobsService {
     },
     mode: string = CrawlMode.TOC_AND_CHAPTERS,
   ): CrawlJobResponse {
+    const now = new Date();
+    const startedAt = job.startedAt || job.createdAt;
+    const elapsedMs = now.getTime() - startedAt.getTime();
+    const totalMs = job.finishedAt
+      ? job.finishedAt.getTime() - startedAt.getTime()
+      : null;
+
     return {
       id: job.id,
       storyId: job.storyId,
@@ -200,6 +221,8 @@ export class CrawlJobsService {
       errorMessage: job.errorMessage,
       startedAt: job.startedAt,
       finishedAt: job.finishedAt,
+      elapsedMs,
+      totalMs,
       createdAt: job.createdAt,
     };
   }

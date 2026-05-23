@@ -22,6 +22,8 @@ type StoryWithChapterCount = {
   id: string;
   title: string | null;
   author: string | null;
+  coverUrl: string | null;
+  description: string | null;
   sourceUrl: string;
   language: string | null;
   status: string;
@@ -34,6 +36,8 @@ export interface StoryListItem {
   id: string;
   title: string | null;
   author: string | null;
+  coverUrl: string | null;
+  description: string | null;
   sourceUrl: string;
   language: string | null;
   status: string;
@@ -261,6 +265,8 @@ export class StoriesService {
       id: story.id,
       title: story.title,
       author: story.author,
+      coverUrl: story.coverUrl,
+      description: story.description,
       sourceUrl: story.sourceUrl,
       language: story.language,
       status: story.status,

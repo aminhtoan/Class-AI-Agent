@@ -229,6 +229,15 @@ export default function PdfJobProgressPage() {
             />
           )}
 
+          {currentStatus === 'succeeded' && !job.file && (
+            <ProcessingView
+              storyTitle={storyTitle}
+              progress={100}
+              progressDone={1}
+              progressTotal={1}
+            />
+          )}
+
           {(currentStatus === 'failed' || currentStatus === 'cancelled') && (
             <FailedView storyId={job.storyId} />
           )}

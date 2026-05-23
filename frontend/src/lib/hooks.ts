@@ -142,6 +142,8 @@ interface JobProgress {
   status: JobStatus;
   progressDone: number;
   progressTotal: number;
+  elapsedMs?: number;
+  totalMs?: number | null;
 }
 
 export function useJobProgress(
@@ -149,6 +151,7 @@ export function useJobProgress(
   jobId: string | null
 ): JobProgress | null {
   const [progress, setProgress] = useState<JobProgress | null>(null);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     if (!jobId) return;
@@ -165,11 +168,18 @@ export function useJobProgress(
           status: data.status,
           progressDone: data.progressDone,
           progressTotal: data.progressTotal,
+          elapsedMs: data.elapsedMs,
+          totalMs: data.totalMs,
         });
 
         const finishedStatuses: JobStatus[] = ['succeeded', 'failed', 'cancelled'];
         if (finishedStatuses.includes(data.status)) {
           eventSource.close();
+          if (type === 'pdf') {
+            queryClient.invalidateQueries({ queryKey: ['pdf-job', jobId] });
+          } else {
+            queryClient.invalidateQueries({ queryKey: ['story'] });
+          }
         }
       } catch (error) {
         console.error('Failed to parse SSE data:', error);
@@ -183,7 +193,7 @@ export function useJobProgress(
     return () => {
       eventSource.close();
     };
-  }, [type, jobId]);
+  }, [type, jobId, queryClient]);
 
   return progress;
 }

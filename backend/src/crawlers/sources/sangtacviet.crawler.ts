@@ -301,6 +301,17 @@ export class SangtacvietCrawler implements Crawler {
   }
 
   async fetchChapter(chapterUrl: string): Promise<CrawlerResult<ChapterData>> {
+    // First try simple HTML fetch - content is often rendered server-side
+    try {
+      const result = await this.fetchChapterFromHtml(chapterUrl);
+      if (result.success) {
+        return result;
+      }
+    } catch {
+      // Fall through to browser-based approach
+    }
+
+    // Fall back to browser-based approach if HTML fetch fails
     const urlParts = parseChapterUrl(chapterUrl);
     if (!urlParts) {
       return {
@@ -312,21 +323,115 @@ export class SangtacvietCrawler implements Crawler {
       };
     }
 
-    // Use browser-based approach for sangtacviet due to anti-bot protection
-    return this.fetchChapterWithBrowser(chapterUrl, urlParts);
+    return this.fetchChapterWithBrowser(chapterUrl);
   }
 
-  private async fetchChapterWithBrowser(
-    chapterUrl: string,
-    urlParts: { host: string; bookId: string; chapterId: string; baseUrl: string },
-  ): Promise<CrawlerResult<ChapterData>> {
+  private async fetchChapterFromHtml(chapterUrl: string): Promise<CrawlerResult<ChapterData>> {
+    const html = await fetchHtml(chapterUrl);
+    const $ = cheerio.load(html);
+
+    // Get chapter title
+    const title =
+      $('h1.chuong-title').text().trim() ||
+      $('meta[property="og:title"]').attr('content')?.trim() ||
+      $('h1').first().text().trim() ||
+      'Untitled';
+
+    // Try multiple selectors for content
+    const contentSelectors = [
+      '#chapter-content',
+      '#noidung',
+      '.chapter-content',
+      '.noi-dung',
+      '#content',
+      '.content-chapter',
+      'article.chapter',
+      '#maincontent',
+    ];
+
+    let contentHtml = '';
+
+    for (const selector of contentSelectors) {
+      const el = $(selector);
+      if (el.length > 0) {
+        const text = el.text().trim();
+        // Check for actual content: substantial length, has Vietnamese chars, no loading placeholders
+        const hasVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(text);
+        const isPlaceholder = text.includes('Nhấp vào để tải') || text.includes('loading') || text.includes('try{');
+        if (text.length > 200 && hasVietnamese && !isPlaceholder) {
+          contentHtml = el.html() || '';
+          break;
+        }
+      }
+    }
+
+    // If no content found with selectors, try finding by class pattern
+    if (!contentHtml) {
+      $('div').each((_, el) => {
+        const $el = $(el);
+        const className = $el.attr('class') || '';
+        const id = $el.attr('id') || '';
+
+        if (
+          className.includes('content') ||
+          className.includes('noidung') ||
+          className.includes('chapter') ||
+          id.includes('content') ||
+          id.includes('noidung')
+        ) {
+          const text = $el.text().trim();
+          const hasVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(text);
+          const isPlaceholder = text.includes('Nhấp vào để tải') || text.includes('loading') || text.includes('try{');
+          if (text.length > 500 && hasVietnamese && !isPlaceholder) {
+            contentHtml = $el.html() || '';
+            return false; // break
+          }
+        }
+      });
+    }
+
+    if (!contentHtml || contentHtml.length < 200) {
+      return {
+        success: false,
+        error: {
+          code: 'NO_CONTENT',
+          message: 'Could not find chapter content in HTML',
+        },
+      };
+    }
+
+    // Clean up the content
+    const contentText = stripHtml(contentHtml);
+
+    if (contentText.length < 100) {
+      return {
+        success: false,
+        error: {
+          code: 'CONTENT_TOO_SHORT',
+          message: 'Chapter content appears to be empty or too short',
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        title,
+        contentHtml,
+        contentText,
+        wordCount: countWords(contentText),
+      },
+    };
+  }
+
+  private async fetchChapterWithBrowser(chapterUrl: string): Promise<CrawlerResult<ChapterData>> {
     const chromePath = await findChromePath();
     if (!chromePath) {
       return {
         success: false,
         error: {
           code: 'NO_BROWSER',
-          message: 'Chrome/Chromium not found. Install Chrome to fetch chapter content from sangtacviet.',
+          message: 'Chrome/Chromium not found. Install Chrome to fetch chapter content.',
         },
       };
     }
@@ -347,161 +452,111 @@ export class SangtacvietCrawler implements Crawler {
 
       try {
         const page = await browser.newPage();
-
-        // Evade detection - hide webdriver property
         await page.evaluateOnNewDocument('Object.defineProperty(navigator, "webdriver", { get: () => false })');
-
         await page.setUserAgent(USER_AGENT);
         await page.setExtraHTTPHeaders({
           'Accept-Language': 'vi-VN,vi;q=0.9,en-US;q=0.8,en;q=0.7',
         });
 
-        let capturedContent: ChapterApiResponse | null = null;
-        let capturedError: ChapterApiResponse | null = null;
-
-        // Intercept API responses
-        page.on('response', async response => {
-          const url = response.url();
-          if (url.includes('sajax=readchapter') && url.includes('ngmar=readc')) {
-            try {
-              const text = await response.text();
-              const json: ChapterApiResponse = JSON.parse(text);
-              if (json.code === '0' || json.code === 0) {
-                capturedContent = json;
-              } else {
-                capturedError = json;
-              }
-            } catch {
-              // Ignore parse errors
-            }
-          }
-        });
-
-        // Navigate to chapter page and wait for network to settle
         await page.goto(chapterUrl, {
           waitUntil: 'networkidle0',
           timeout: 45000,
         });
 
-        // Wait for async content loading
-        await new Promise(r => setTimeout(r, 3000));
-
-        // If content wasn't captured automatically, try triggering the API call manually
-        if (!capturedContent) {
-          const manualResult = await page.evaluate((params: { host: string; bookId: string; chapterId: string }) => {
-            return new Promise<string>((resolve) => {
-              // @ts-ignore - XMLHttpRequest exists in browser context
-              const xhr = new (window as any).XMLHttpRequest();
-              const apiUrl = `/index.php?bookid=${params.bookId}&h=${params.host}&c=${params.chapterId}&ngmar=readc&sajax=readchapter&sty=1&exts=800`;
-              xhr.open('POST', apiUrl, true);
-              xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
-              xhr.onreadystatechange = function() {
-                if (xhr.readyState === 4) {
-                  resolve(xhr.responseText);
-                }
-              };
-              xhr.send('rescan=true&k=');
-            });
-          }, urlParts);
-
-          if (manualResult) {
-            try {
-              const json: ChapterApiResponse = JSON.parse(manualResult);
-              if (json.code === '0' || json.code === 0) {
-                capturedContent = json;
-              } else {
-                capturedError = json;
+        // Wait for content to load - the site loads content dynamically
+        // Try waiting for specific content selectors
+        try {
+          await page.waitForFunction(
+            () => {
+              const doc = (globalThis as any).document;
+              const el = doc.querySelector('#contentChap') ||
+                         doc.querySelector('#chapter-content') ||
+                         doc.querySelector('#noidung');
+              if (el) {
+                const text = el.textContent?.trim() || '';
+                return text.length > 200 && !text.includes('Nhấp vào để tải');
               }
-            } catch {
-              // Ignore
+              return false;
+            },
+            { timeout: 15000 }
+          );
+        } catch {
+          // Content might already be there or loaded differently
+        }
+
+        // Additional wait for any animations/transitions
+        await new Promise(r => setTimeout(r, 2000));
+
+        // Try to get content from DOM
+        const result = await page.evaluate(() => {
+          const doc = (globalThis as any).document;
+
+          // Priority selectors for sangtacviet
+          const selectors = [
+            '#contentChap',
+            '#chapter-content',
+            '#noidung',
+            '.chapter-content',
+            '.noi-dung',
+            '#content',
+            '#maincontent',
+          ];
+
+          for (const selector of selectors) {
+            const el = doc.querySelector(selector);
+            if (el) {
+              const text = el.textContent?.trim() || '';
+              // Make sure it's actual content, not a loading message
+              if (text.length > 200 && !text.includes('Nhấp vào để tải') && !text.includes('loading')) {
+                return {
+                  html: el.innerHTML,
+                  text: text,
+                };
+              }
             }
           }
-        }
 
-        // If still no content, try triggering the page's own function
-        if (!capturedContent) {
-          await page.evaluate(() => {
-            // @ts-ignore
-            if (typeof window.gotox === 'function') window.gotox();
-            // @ts-ignore
-            if (typeof window.loadChapter === 'function') window.loadChapter();
-          });
-          await new Promise(r => setTimeout(r, 5000));
-        }
-
-        if (capturedContent && capturedContent.data) {
-          const contentHtml = capturedContent.data;
-          const contentText = stripHtml(contentHtml);
-          return {
-            success: true,
-            data: {
-              title: capturedContent.chaptername || 'Untitled',
-              contentHtml,
-              contentText,
-              wordCount: countWords(contentText),
-            },
-          };
-        }
-
-        // Handle specific error codes
-        if (capturedError) {
-          const errorCode = String(capturedError.code);
-          const errorMessage = capturedError.err || 'Unknown API error';
-
-          if (errorMessage.includes('4002')) {
-            return {
-              success: false,
-              error: {
-                code: 'VIP_CONTENT',
-                message: 'This chapter requires VIP/premium access or login on sangtacviet.app. Please login in your browser first, then try again. Error: ' + errorMessage,
-              },
-            };
-          }
-
-          if (errorCode === '5') {
-            return {
-              success: false,
-              error: {
-                code: 'AUTH_REQUIRED',
-                message: 'Authentication required. Please login to sangtacviet.app in your Chrome browser first. Error: ' + errorMessage,
-              },
-            };
-          }
-
-          return {
-            success: false,
-            error: {
-              code: 'API_ERROR',
-              message: `API error (code ${errorCode}): ${errorMessage}`,
-            },
-          };
-        }
-
-        // Try to get content from the DOM as last resort
-        const domContent = await page.evaluate(() => {
-          // @ts-ignore - document exists in browser context
-          const contentEl = (window as any).document.querySelector('#maincontent');
-          if (contentEl) {
-            const text = contentEl.textContent || '';
-            if (text.length > 500 && !text.includes('Nhấp vào để tải') && !text.includes('loading')) {
-              return {
-                html: contentEl.innerHTML,
-                text: text,
-              };
+          // Try finding any div with substantial Vietnamese text
+          const divs = doc.querySelectorAll('div');
+          for (const div of divs) {
+            const text = div.textContent?.trim() || '';
+            // Look for Vietnamese text patterns (common Vietnamese characters)
+            const hasVietnamese = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(text);
+            if (text.length > 500 && hasVietnamese) {
+              const className = div.className || '';
+              const id = div.id || '';
+              if (
+                className.includes('content') ||
+                className.includes('noidung') ||
+                className.includes('chap') ||
+                id.includes('content') ||
+                id.includes('noidung') ||
+                id.includes('chap')
+              ) {
+                return {
+                  html: div.innerHTML,
+                  text: text,
+                };
+              }
             }
           }
+
           return null;
         });
 
-        if (domContent && domContent.text.length > 500) {
-          const titleEl = await page.$eval('meta[property="og:title"]', el => el.getAttribute('content')).catch(() => 'Untitled');
+        if (result && result.text.length > 100) {
+          const title = await page.$eval(
+            'h1.chuong-title, meta[property="og:title"]',
+            (el: any) => el.textContent?.trim() || el.getAttribute('content')
+          ).catch(() => 'Untitled');
+
           return {
             success: true,
             data: {
-              title: titleEl || 'Untitled',
-              contentHtml: domContent.html,
-              contentText: stripHtml(domContent.html),
-              wordCount: countWords(domContent.text),
+              title: title || 'Untitled',
+              contentHtml: result.html,
+              contentText: stripHtml(result.html),
+              wordCount: countWords(result.text),
             },
           };
         }
@@ -509,8 +564,8 @@ export class SangtacvietCrawler implements Crawler {
         return {
           success: false,
           error: {
-            code: 'CONTENT_NOT_LOADED',
-            message: 'Could not load chapter content. The chapter may require VIP access on sangtacviet.app.',
+            code: 'CONTENT_NOT_FOUND',
+            message: 'Could not find chapter content on page. Content may require VIP access.',
           },
         };
       } finally {
